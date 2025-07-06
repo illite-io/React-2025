@@ -1,0 +1,164 @@
+좋아요! 이번에는 **`react-hook-form` + `yup`으로 로그인/회원가입 유효성 검사**를 적용하는 방법을 알려드릴게요.
+이 조합은 **폼 상태 관리 + 입력값 유효성 검사**를 깔끔하게 처리할 수 있어서 로그인, 회원가입, 설정 폼 등 다양한 곳에 많이 사용됩니다.
+
+---
+
+# ✅ 목표
+
+* 아이디, 비밀번호 입력 필수 확인
+* 최소 길이, 이메일 형식 등 유효성 검사 적용
+* 에러 메시지를 항목 아래 표시
+
+---
+
+## ✅ 1. 필요한 패키지 설치
+
+```bash
+npm install react-hook-form
+npm install @hookform/resolvers yup
+npm install yup
+```
+
+---
+
+## ✅ 2. 기본 로그인 폼 구조
+
+📄 `/components/LoginForm.tsx`
+
+```tsx
+import { useForm } from 'react-hook-form';
+
+type FormValues = {
+  username: string;
+  password: string;
+};
+
+const LoginForm = () => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>();
+
+  const onSubmit = (data: FormValues) => {
+    console.log('로그인 시도:', data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input
+        placeholder="아이디"
+        {...register('username', { required: '아이디는 필수입니다.' })}
+      />
+      {errors.username && <p>{errors.username.message}</p>}
+
+      <input
+        type="password"
+        placeholder="비밀번호"
+        {...register('password', {
+          required: '비밀번호는 필수입니다.',
+          minLength: { value: 4, message: '비밀번호는 최소 4자 이상입니다.' },
+        })}
+      />
+      {errors.password && <p>{errors.password.message}</p>}
+
+      <button type="submit">로그인</button>
+    </form>
+  );
+};
+
+export default LoginForm;
+```
+
+---
+
+## ✅ 3. yup으로 스키마 유효성 검사 적용
+
+📄 `/components/LoginFormWithYup.tsx`
+
+```tsx
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+
+type FormValues = {
+  username: string;
+  password: string;
+};
+
+const schema = yup.object().shape({
+  username: yup.string().required('아이디는 필수입니다.'),
+  password: yup
+    .string()
+    .required('비밀번호는 필수입니다.')
+    .min(4, '비밀번호는 최소 4자 이상입니다.'),
+});
+
+const LoginFormWithYup = () => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: yupResolver(schema),
+  });
+
+  const onSubmit = (data: FormValues) => {
+    console.log('로그인 시도:', data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input placeholder="아이디" {...register('username')} />
+      {errors.username && <p>{errors.username.message}</p>}
+
+      <input type="password" placeholder="비밀번호" {...register('password')} />
+      {errors.password && <p>{errors.password.message}</p>}
+
+      <button type="submit">로그인</button>
+    </form>
+  );
+};
+
+export default LoginFormWithYup;
+```
+
+---
+
+## ✅ 4. 결과
+
+| 입력값        | 에러 메시지             |
+| ---------- | ------------------ |
+| 아이디 미입력    | 아이디는 필수입니다.        |
+| 비밀번호 3자 이하 | 비밀번호는 최소 4자 이상입니다. |
+
+---
+
+## ✅ 5. 추가 유효성 검사 예시
+
+| 조건      | yup 코드 예시                                                                  |
+| ------- | -------------------------------------------------------------------------- |
+| 이메일 형식  | `email: yup.string().email('이메일 형식이 아닙니다.')`                               |
+| 정규식 검사  | `username: yup.string().matches(/^[a-zA-Z0-9]+$/)`                         |
+| 두 필드 비교 | `passwordConfirm: yup.string().oneOf([yup.ref('password')], '비밀번호가 다릅니다')` |
+
+---
+
+## 📌 요약
+
+| 항목      | 설명                                |
+| ------- | --------------------------------- |
+| 폼 라이브러리 | `react-hook-form`                 |
+| 유효성 검사  | `yup` + `@hookform/resolvers/yup` |
+| 에러 메시지  | `errors.[field]?.message`         |
+| 구조 분리   | yup 스키마만 따로 관리해도 좋음               |
+
+---
+
+## 👉 다음 추천 주제
+
+* ✅ Google / GitHub 로그인 버튼 UI 구성 (디자인 중심)
+* ✅ 로그인 후 알림센터 or 마이페이지 기본 구조 설계
+* ✅ 회원가입 폼 유효성 검사 확장 (이메일 중복, 비밀번호 확인 등)
+
+계속 보시려면 `"다음"`이라고 입력해주세요!
