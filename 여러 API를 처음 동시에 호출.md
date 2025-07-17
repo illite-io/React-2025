@@ -842,6 +842,3 @@ const [usersRes, postsRes, commentsRes] = axios.spread(
 ```
 
 ---
-
-다음에는 각 요청이 **서로 의존**할 때, 즉 순차적으로 호출해야 할 때 (`await → await`)의 예시도 보여드릴게요.
-계속 보시려면 \*\*“다음”\*\*이라고 말씀해주세요!
