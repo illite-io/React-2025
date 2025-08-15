@@ -1,0 +1,506 @@
+`useCallback`, `React.memo`, `useMemo`는 **리액트에서 불필요한 리렌더링을 줄여 성능을 최적화**하기 위한 대표적인 도구입니다. 각각의 목적과 사용하는 이유를 아래와 같이 정리할 수 있습니다.
+
+---
+
+## ✅ 공통 목표: **불필요한 리렌더링 줄이기**
+
+리액트 컴포넌트는 **상위 컴포넌트가 리렌더링되면 자식 컴포넌트도 기본적으로 리렌더링**됩니다. 하지만 값이 바뀌지 않았는데도 매번 렌더링하면 성능 낭비가 생깁니다.
+이 문제를 해결하기 위해 `useCallback`, `useMemo`, `React.memo`를 사용합니다.
+
+---
+
+## 🔹 1. `React.memo` – **컴포넌트 리렌더링 막기**
+
+```tsx
+// components/ExpensiveComponent.tsx
+import React from 'react';
+
+type Props = {
+  value: number;
+};
+
+const ExpensiveComponent = ({ value }: Props) => {
+  console.log('👀 렌더링됨:', value);
+  return <div>{value}</div>;
+};
+
+// React.memo를 쓰면 props가 변경되지 않는 한 다시 렌더링되지 않음
+export default React.memo(ExpensiveComponent);
+```
+
+### 💡 사용 이유
+
+* 부모가 리렌더링되더라도 **props가 같으면 자식 컴포넌트는 리렌더링 안 됨**
+* `===` 비교로 shallow compare(얕은 비교)만 하기 때문에, props가 참조형이면 주의 필요
+
+---
+
+## 🔹 2. `useCallback` – **함수 재생성 방지**
+
+```tsx
+// App.tsx
+import React, { useCallback, useState } from 'react';
+import ExpensiveComponent from './components/ExpensiveComponent';
+
+const App = () => {
+  const [count, setCount] = useState(0);
+
+  // 이 함수는 count가 변경되지 않는 한, 같은 참조를 유지함
+  const handleClick = useCallback(() => {
+    console.log('Clicked');
+  }, []);
+
+  return (
+    <div>
+      <button onClick={() => setCount((c) => c + 1)}>증가</button>
+      <ExpensiveComponent value={count} />
+    </div>
+  );
+};
+
+export default App;
+```
+
+### 💡 사용 이유
+
+* 자식 컴포넌트에 **콜백 함수를 props로 전달할 때**,
+* 함수가 매 렌더마다 새로 만들어지면 → 자식 컴포넌트는 계속 리렌더됨
+* `useCallback`을 쓰면 **같은 함수 참조를 유지**할 수 있음
+
+---
+
+## 🔹 3. `useMemo` – **값(계산 결과) 재계산 방지**
+
+```tsx
+// App.tsx
+import React, { useMemo, useState } from 'react';
+
+const heavyComputation = (num: number) => {
+  console.log('🔁 복잡한 계산 중...');
+  let result = 0;
+  for (let i = 0; i < 1e7; i++) result += num * Math.random();
+  return result;
+};
+
+const App = () => {
+  const [count, setCount] = useState(0);
+  const [value, setValue] = useState(1);
+
+  // value가 바뀔 때만 계산 다시 수행
+  const computed = useMemo(() => heavyComputation(value), [value]);
+
+  return (
+    <div>
+      <h1>계산 결과: {computed}</h1>
+      <button onClick={() => setCount((c) => c + 1)}>카운트 +</button>
+      <button onClick={() => setValue((v) => v + 1)}>값 변경</button>
+    </div>
+  );
+};
+
+export default App;
+```
+
+### 💡 사용 이유
+
+* 렌더링마다 **비용이 큰 계산이 반복되는 것을 방지**
+* 특정 의존값이 바뀔 때만 재계산하고, 그렇지 않으면 **기존 결과를 재사용**
+
+---
+
+## 🔚 정리 요약
+
+| 기능            | 목적           | 사용 위치 | 언제 쓰는가?               |
+| ------------- | ------------ | ----- | --------------------- |
+| `React.memo`  | 컴포넌트 리렌더링 방지 | 컴포넌트  | props가 바뀌지 않으면 렌더링 방지 |
+| `useCallback` | 함수 재생성 방지    | 함수 정의 | 콜백 함수가 자식에 전달되는 경우    |
+| `useMemo`     | 값 재계산 방지     | 계산식   | 무거운 계산이 렌더마다 반복되는 경우  |
+
+---
+
+필요한 상황에서만 써야 하며, 과도한 사용은 오히려 성능 저하를 초래할 수 있습니다.
+👉 **불필요한 렌더링이 실제로 발생하는지 확인하고 도입**하는 게 중요합니다.
+
+---
+
+다음에 `React.memo`, `useCallback`, `useMemo` 각각 실제 예제 프로젝트로 하나씩 더 자세히 보고 싶으시면 말씀해주세요!
+
+---
+
+좋아요! 이번엔 `React.memo`를 좀 더 **자세히** 예제와 함께 설명드릴게요.
+
+---
+
+## ✅ `React.memo` 완전 이해하기
+
+### 📌 핵심 개념
+
+`React.memo`는 **컴포넌트를 메모이제이션**해서,
+**props가 변경되지 않으면 리렌더링을 건너뜁니다.**
+
+> "부모 컴포넌트가 리렌더링돼도 자식은 props가 같다면 다시 렌더링되지 않음."
+
+---
+
+## 📁 예시 코드: `React.memo`로 리렌더링 최적화
+
+### 🗂️ `src/components/UserInfo.tsx`
+
+```tsx
+import React from 'react';
+
+type Props = {
+  name: string;
+};
+
+// 컴포넌트가 렌더링될 때 로그 출력
+const UserInfo = ({ name }: Props) => {
+  console.log('👤 UserInfo 렌더링됨:', name);
+  return <p>이름: {name}</p>;
+};
+
+// React.memo로 감싸면 props.name이 바뀌지 않으면 리렌더링 되지 않음
+export default React.memo(UserInfo);
+```
+
+---
+
+### 🗂️ `src/App.tsx`
+
+```tsx
+import React, { useState } from 'react';
+import UserInfo from './components/UserInfo';
+
+const App = () => {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <h1>React.memo 예제</h1>
+      <button onClick={() => setCount((c) => c + 1)}>카운트 증가: {count}</button>
+
+      {/* props는 고정값이므로 UserInfo는 리렌더링 되지 않음 */}
+      <UserInfo name="박하" />
+    </div>
+  );
+};
+
+export default App;
+```
+
+---
+
+## 🔍 콘솔 출력 비교
+
+버튼을 여러 번 클릭하면:
+
+```bash
+React.memo 예제
+👤 UserInfo 렌더링됨: 박하   <-- 최초 1회만 출력됨
+```
+
+### ✅ 결과 설명
+
+* `<App />`은 `count`가 바뀔 때마다 리렌더링됩니다.
+* 하지만 `<UserInfo name="박하" />`는 **`name`이 바뀌지 않기 때문에** 리렌더링되지 않음.
+
+---
+
+## ⚠️ 주의할 점
+
+1. **props가 객체나 함수인 경우**, 참조값이 바뀌면 리렌더링됩니다.
+2. 얕은 비교(Shallow Comparison)만 수행합니다.
+
+```tsx
+// 이 경우 리렌더링 발생함
+<UserInfo user={{ name: '박하' }} />
+```
+
+이 경우엔 `useMemo`나 `useCallback`으로 값을 메모이제이션해서 넘겨줘야 합니다.
+
+---
+
+## 🧠 언제 쓰면 좋을까?
+
+| 사용 시점                           | 예시                         |
+| ------------------------------- | -------------------------- |
+| 자식 컴포넌트가 props 외에 리렌더링 원인이 없을 때 | `<Profile name="철수" />`    |
+| 리스트를 반복 렌더링할 때                  | `<TodoItem todo={todo} />` |
+| 리렌더링이 성능에 영향을 줄 정도로 무거울 때       | 차트, 이미지 등                  |
+
+---
+
+필요하시다면 `React.memo`를 커스텀 비교 함수와 함께 쓰는 방법도 이어서 알려드릴게요.
+그게 아니라면 👉 `useCallback` 실제 예제로 넘어가볼까요?
+\*\*"다음"\*\*이라고 말씀주시면 이어서 설명드릴게요.
+
+
+좋습니다! 이번에는 `useCallback`을 예제와 함께 **자세히** 설명드릴게요.
+
+---
+
+## ✅ `useCallback` 완전 이해하기
+
+### 📌 핵심 개념
+
+`useCallback`은 **함수를 메모이제이션**해서,
+**의존성 배열이 바뀌지 않으면 같은 함수 참조를 재사용**하게 해줍니다.
+
+> "함수가 매 렌더마다 새로 만들어지는 것을 방지해서, 자식 컴포넌트에 props로 전달될 때 리렌더링을 막을 수 있다."
+
+---
+
+## 📁 예시 코드: `useCallback` 없이 리렌더링 발생
+
+### 🗂️ `src/components/CountButton.tsx`
+
+```tsx
+import React from 'react';
+
+type Props = {
+  onClick: () => void;
+};
+
+// 클릭 이벤트가 바뀌면 매번 리렌더링됨
+const CountButton = ({ onClick }: Props) => {
+  console.log('🔁 CountButton 렌더링');
+  return <button onClick={onClick}>클릭</button>;
+};
+
+export default React.memo(CountButton);
+```
+
+---
+
+### 🗂️ `src/App.tsx`
+
+```tsx
+import React, { useState } from 'react';
+import CountButton from './components/CountButton';
+
+const App = () => {
+  const [count, setCount] = useState(0);
+
+  // 🔥 이 함수는 매 렌더마다 새로 만들어짐
+  const handleClick = () => {
+    setCount((c) => c + 1);
+  };
+
+  return (
+    <div>
+      <h1>카운트: {count}</h1>
+      <CountButton onClick={handleClick} />
+    </div>
+  );
+};
+
+export default App;
+```
+
+---
+
+## 🔍 문제점
+
+* `App`이 리렌더링될 때마다 `handleClick` 함수는 **새로운 함수 객체**로 생성됨.
+* `CountButton`은 `React.memo`를 쓰더라도 `onClick` prop이 바뀌었기 때문에 리렌더링됨.
+
+---
+
+## 🛠️ `useCallback`으로 해결
+
+### ✅ 수정된 `App.tsx`
+
+```tsx
+import React, { useState, useCallback } from 'react';
+import CountButton from './components/CountButton';
+
+const App = () => {
+  const [count, setCount] = useState(0);
+
+  // ✅ 함수가 재사용됨: count가 바뀌어도 함수 참조는 유지됨
+  const handleClick = useCallback(() => {
+    setCount((c) => c + 1);
+  }, []); // 의존성 배열에 아무 것도 없으므로 최초 1번만 생성됨
+
+  return (
+    <div>
+      <h1>카운트: {count}</h1>
+      <CountButton onClick={handleClick} />
+    </div>
+  );
+};
+
+export default App;
+```
+
+---
+
+## 🔍 콘솔 비교
+
+```bash
+🔁 CountButton 렌더링   (useCallback 없을 때: 매번 출력됨)
+                        (useCallback 있을 때: 1회만 출력됨)
+```
+
+---
+
+## ⚠️ 주의할 점
+
+| 잘못된 예                                            | 설명                                 |
+| ------------------------------------------------ | ---------------------------------- |
+| `useCallback(() => doSomething(count), [count])` | ✅ count가 바뀌면 새로운 함수로 교체됨           |
+| `useCallback(() => doSomething(), [])`           | ✅ count 등 외부 상태를 사용하지 않으면 이 방식이 안전 |
+
+---
+
+## 🧠 언제 사용해야 할까?
+
+| 상황                              | 사용 이유    |
+| ------------------------------- | -------- |
+| 자식 컴포넌트에 **콜백 함수 props** 전달 시   | 리렌더링 방지  |
+| 컴포넌트가 **빈번하게 렌더링**될 때           | 성능 최적화   |
+| `useEffect`의 의존성 배열에 들어가는 함수일 때 | 무한 루프 방지 |
+
+---
+
+`useCallback`은 `React.memo`와 함께 쓸 때 가장 강력한 효과를 발휘합니다.
+다음은 `useMemo`에 대해 자세히 설명드릴까요?
+👉 “다음”이라고 말씀해 주세요!
+
+---
+
+좋습니다! 이번엔 `useMemo`를 예제와 함께 **자세히** 설명드릴게요.
+
+---
+
+## ✅ `useMemo` 완전 이해하기
+
+### 📌 핵심 개념
+
+`useMemo`는 **계산된 값을 메모이제이션**해서,
+**의존성 값이 변경되지 않으면 이전 계산값을 재사용**합니다.
+
+> "렌더링마다 다시 계산하지 말고, 바뀔 때만 계산해줘!"
+
+---
+
+## 📁 예시 코드: 복잡한 계산을 `useMemo` 없이 처리할 때
+
+### 🗂️ `src/App.tsx`
+
+```tsx
+import React, { useState } from 'react';
+
+const heavyComputation = (num: number) => {
+  console.log('🔁 복잡한 계산 수행 중...');
+  let result = 0;
+  for (let i = 0; i < 1e7; i++) {
+    result += Math.sqrt(num + i);
+  }
+  return result;
+};
+
+const App = () => {
+  const [count, setCount] = useState(0);
+  const [value, setValue] = useState(1);
+
+  // 🔥 렌더링될 때마다 매번 계산 수행
+  const result = heavyComputation(value);
+
+  return (
+    <div>
+      <h1>값: {value}, 결과: {result}</h1>
+      <button onClick={() => setCount((c) => c + 1)}>카운트 증가: {count}</button>
+      <button onClick={() => setValue((v) => v + 1)}>값 변경</button>
+    </div>
+  );
+};
+
+export default App;
+```
+
+---
+
+## 🔍 문제점
+
+* `count`만 바뀌어도 `heavyComputation`이 **매번 다시 계산됨** (성능 낭비)
+* `value`가 바뀌지 않았더라도 계산 반복
+
+---
+
+## 🛠️ `useMemo`로 성능 최적화
+
+### ✅ 수정된 `App.tsx`
+
+```tsx
+import React, { useState, useMemo } from 'react';
+
+const heavyComputation = (num: number) => {
+  console.log('🔁 복잡한 계산 수행 중...');
+  let result = 0;
+  for (let i = 0; i < 1e7; i++) {
+    result += Math.sqrt(num + i);
+  }
+  return result;
+};
+
+const App = () => {
+  const [count, setCount] = useState(0);
+  const [value, setValue] = useState(1);
+
+  // ✅ value가 바뀔 때만 계산 수행
+  const result = useMemo(() => heavyComputation(value), [value]);
+
+  return (
+    <div>
+      <h1>값: {value}, 결과: {result}</h1>
+      <button onClick={() => setCount((c) => c + 1)}>카운트 증가: {count}</button>
+      <button onClick={() => setValue((v) => v + 1)}>값 변경</button>
+    </div>
+  );
+};
+
+export default App;
+```
+
+---
+
+## 🔍 콘솔 비교
+
+버튼 여러 번 클릭해도 다음처럼 출력됨:
+
+```bash
+🔁 복잡한 계산 수행 중...  ← value 바뀔 때만 출력
+```
+
+---
+
+## ⚠️ 주의할 점
+
+| 잘못된 사용                                       | 문제점                       |
+| -------------------------------------------- | ------------------------- |
+| `useMemo(() => heavyComputation(value), [])` | value가 바뀌어도 계산 안됨 (버그 발생) |
+| `useMemo(() => {}, [count, value])`          | 불필요하게 메모이제이션하면 오히려 느려짐    |
+
+### ✅ useMemo는 다음 조건일 때만 사용!
+
+* 계산량이 무겁고
+* 렌더링마다 다시 계산하면 성능 문제가 생기고
+* 의존성이 적절하게 주어졌을 때
+
+---
+
+## 🧠 언제 사용해야 할까?
+
+| 상황                                  | 사용 이유            |
+| ----------------------------------- | ---------------- |
+| 무거운 계산이 자주 일어날 때                    | 연산 최적화           |
+| `props`로 계산 결과를 넘기는데 리렌더링 방지하고 싶을 때 | `React.memo`와 함께 |
+| `useEffect` 의존성 배열이 복잡할 때           | 값 캐싱             |
+
+---
+
+이로써 `React.memo`, `useCallback`, `useMemo`를 각각 자세히 다뤘습니다.
+필요하시다면 🔄 **세 가지를 조합한 통합 예제**도 만들어 드릴 수 있어요.
+
+계속해서 다른 React 주제로 넘어가고 싶다면 “다음”이라고 말씀해주세요!
