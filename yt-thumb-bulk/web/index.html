@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>유튜브 썸네일 벌크 ZIP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { max-width: 720px; margin: 40px auto; font-family: system-ui, sans-serif; }
+    label { display:block; margin: 12px 0 6px; }
+    input, button { padding: 10px; width: 100%; box-sizing: border-box; }
+    progress { width: 100%; height: 20px; }
+    .row { display:flex; gap:12px; }
+    .row > * { flex:1; }
+    .log { padding:8px; background:#f6f6f6; height:150px; overflow:auto; font-size:12px; }
+  </style>
+</head>
+<body>
+  <h1>유튜브 주소 → 썸네일 ZIP</h1>
+  <div class="row">
+    <div>
+      <label>API Key (x-api-key)</label>
+      <input id="apiKey" placeholder="abc123" />
+    </div>
+    <div>
+      <label>최대 개수</label>
+      <input id="count" type="number" value="100" min="1" max="1000" />
+    </div>
+  </div>
+
+  <label>유튜브 주소(채널/핸들/플레이리스트/영상)</label>
+  <input id="url" placeholder="https://www.youtube.com/@GoogleDevelopers" />
+
+  <button id="start">ZIP 만들기</button>
+
+  <h3>진행률</h3>
+  <progress id="prog" value="0" max="100"></progress>
+  <div id="status"></div>
+
+  <h3>로그</h3>
+  <pre class="log" id="log"></pre>
+
+  <script src="./app.js"></script>
+</body>
+</html>
