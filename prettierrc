@@ -1,0 +1,19 @@
+{
+  "semi": false,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "none",
+  "printWidth": 100,
+  "bracketSpacing": true,
+  "arrowParens": "avoid",
+  "endOfLine": "auto"
+}
+
+/*
+  세미콜론 제거 (semi: false)
+  작은따옴표 사용 (singleQuote: true)
+  탭 너비 2칸 (tabWidth: 2)
+  최대 줄 길이 100자 (printWidth: 100)
+  객체 중괄호 앞뒤 공백 (bracketSpacing: true)
+  화살표 함수 매개변수 괄호 생략 가능할 때 생략 (arrowParens: avoid)
+*/
